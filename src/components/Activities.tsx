@@ -7,14 +7,12 @@ import { Dialog } from './Dialog'
 export function Activities({
   items,
   date,
-  today,
   activities,
   changed,
   manage,
 }: {
   items: ActivityDay[]
   date: string
-  today: string
   activities: Activity[]
   changed: () => void
   manage: () => void
@@ -102,7 +100,7 @@ export function Activities({
             type="checkbox"
             aria-label={`Complete ${item.name}`}
             checked={item.status === 'completed'}
-            disabled={busy || date > today}
+            disabled={busy}
             onChange={() =>
               void save(item, {
                 actual: item.status === 'completed' ? 0 : (item.target ?? 0),
@@ -145,7 +143,6 @@ export function Activities({
         <EditActivity
           key={editing.activity_id}
           item={editing}
-          future={date > today}
           busy={busy}
           error={error}
           close={() => setEditing(null)}
@@ -170,14 +167,12 @@ export function Activities({
 
 function EditActivity({
   item,
-  future,
   busy,
   error,
   close,
   save,
 }: {
   item: ActivityDay
-  future: boolean
   busy: boolean
   error: string
   close: () => void
@@ -220,7 +215,6 @@ function EditActivity({
                 max="999999999"
                 step="0.01"
                 defaultValue={item.actual}
-                disabled={future}
                 required
               />
             </label>
@@ -234,7 +228,7 @@ function EditActivity({
         <div className="dialog-actions">
           <button
             type="button"
-            disabled={busy || future}
+            disabled={busy}
             onClick={() => void save({ status: item.status === 'skipped' ? 'pending' : 'skipped' }).catch(() => {})}
           >
             {item.status === 'skipped' ? 'Undo skip' : 'Skip this day'}

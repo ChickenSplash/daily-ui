@@ -224,7 +224,6 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
                 key={selected}
                 items={day.data.activities}
                 date={selected}
-                today={data.today}
                 activities={data.activities}
                 changed={changed}
                 manage={() => setModal('activities')}

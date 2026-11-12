@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { addDays } from '../src/lib/dates'
 
 async function join(page: Page) {
   await page.context().setExtraHTTPHeaders({
@@ -18,6 +19,38 @@ const section = (page: Page, name = 'Daily journal') =>
   page.getByRole('region', { name: `${name} section`, exact: true })
 async function saved(page: Page, name = 'Daily journal') {
   await expect(section(page, name).getByRole('status')).toHaveText('✓ Saved')
+}
+
+for (const offset of [-7, 7]) {
+  test(`activities can be checked and totals edited on a ${offset < 0 ? 'past' : 'future'} date`, async ({ page }) => {
+    await join(page)
+    const today = new URL(page.url()).searchParams.get('date')!
+    await page.goto(`/?date=${addDays(today, offset)}`)
+    await page.getByRole('button', { name: '＋ Add', exact: true }).click()
+    const add = page.getByRole('dialog', { name: 'Add an activity', exact: true })
+    await add.getByLabel('Name', { exact: true }).fill('Any-date push-ups')
+    await add.getByRole('button', { name: 'Add to this day' }).click()
+    const checkbox = page.getByRole('checkbox', { name: 'Complete Any-date push-ups', exact: true })
+    await checkbox.check()
+    await expect(checkbox).toBeChecked()
+    await checkbox.uncheck()
+    await expect(checkbox).not.toBeChecked()
+    await page.getByRole('button', { name: 'Edit Any-date push-ups', exact: true }).click()
+    const edit = page.getByRole('dialog', { name: 'Any-date push-ups', exact: true })
+    await edit.getByLabel('Completed (reps)').fill('12')
+    await edit.getByRole('button', { name: 'Save changes', exact: true }).click()
+    await expect(edit).not.toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('button', { name: /Any-date push-ups.*12 \/ 20/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Edit Any-date push-ups', exact: true }).click()
+    await edit.getByLabel('Completed (reps)').fill('25')
+    await edit.getByRole('button', { name: 'Save changes', exact: true }).click()
+    await expect(edit).not.toBeVisible()
+    await expect(checkbox).toBeChecked()
+    await page.getByRole('button', { name: 'Edit Any-date push-ups', exact: true }).click()
+    await edit.getByRole('button', { name: 'Skip this day', exact: true }).click()
+    await expect(page.getByRole('button', { name: /Any-date push-ups.*Skipped/ })).toBeVisible()
+  })
 }
 
 test('shared sign-in, independent Markdown journals, date navigation and reload', async ({ page }) => {
@@ -257,6 +290,37 @@ test('archived activities can be deleted with confirmation or kept by cancelling
   await item.getByRole('button', { name: 'Delete', exact: true }).click()
   await confirmation.getByRole('button', { name: 'Delete activity', exact: true }).click()
   await expect(item).toHaveCount(0)
+})
+
+test('month heading and arrows have padded hover areas matching the days', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await join(page)
+  const calendar = page.getByRole('region', { name: 'Calendar', exact: true })
+  const title = calendar.locator('.month-title')
+  if (!(await calendar.locator('.month-grid').isVisible())) await title.click()
+  const day = calendar.locator('.date-cell:not(.selected):not(.outside)').first()
+  await day.hover()
+  const reference = await day.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { background: style.backgroundColor, radius: style.borderRadius, height: style.height }
+  })
+  for (const button of [
+    title,
+    calendar.getByRole('button', { name: 'Previous month', exact: true }),
+    calendar.getByRole('button', { name: 'Next month', exact: true }),
+  ]) {
+    await button.hover()
+    await expect(button).toHaveCSS('background-color', reference.background)
+    await expect(button).toHaveCSS('border-radius', reference.radius)
+    await expect(button).toHaveCSS('height', reference.height)
+  }
+  expect(await title.evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft))).toBeGreaterThanOrEqual(
+    12,
+  )
+  expect(await title.evaluate((element) => parseFloat(getComputedStyle(element).paddingRight))).toBeGreaterThanOrEqual(
+    12,
+  )
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
 test('calendar is centred with only a today dot and collapsed journal padding is balanced', async ({

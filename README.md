@@ -8,7 +8,7 @@ A quiet place for daily writing, gratitude and simple activity checklists. A sep
 - Multiple private journals, one Markdown-backed rich-text entry per journal per day.
 - Autosave, local recovery drafts and revision conflicts instead of silent overwrites.
 - Activities measured in repetitions, metres or seconds, or a simple checkbox.
-- Daily totals, partial progress, completion, skip and undo.
+- Daily totals, partial progress, completion, skip and undo on past, present or future dates.
 - Weekly routines with effective dates and historical target snapshots.
 - Journal management, activity archiving and confirmed deletion of archived activities, timezone settings, dark/light themes and export.
 - A minimal calendar: centred date numbers and a single dot for today, without activity or journal badges.

@@ -224,11 +224,14 @@ small,
 .month-title {
   font-size: 16px;
   font-weight: 550;
-  padding: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  white-space: nowrap;
   background: transparent;
 }
 .month-controls {
   display: flex;
+  flex-shrink: 0;
   gap: 5px;
 }
 .month-controls button,
@@ -242,6 +245,16 @@ small,
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px 1px;
+}
+.month-controls button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 48px;
+  padding: 0;
+}
+.calendar-heading button:hover {
+  background: var(--hover);
 }
 .weekday {
   text-align: center;
