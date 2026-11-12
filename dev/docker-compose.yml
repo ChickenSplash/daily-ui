@@ -1,0 +1,44 @@
+# Separate ports and volume: does not touch chat/music dev or production data.
+name: daily-dev
+
+services:
+  hms:
+    build: ../../homelab-management-system
+    image: hms:daily-dev
+    environment:
+      APP_NAME: HMS
+      APP_ENV: local
+      APP_DEBUG: 'false'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /app/data/database.sqlite
+      RUN_MIGRATIONS: 'true'
+      SESSION_DRIVER: database
+      SESSION_COOKIE: daily_dev_session
+      SESSION_LIFETIME: 43200
+      SESSION_SECURE_COOKIE: 'false'
+      CACHE_STORE: database
+      QUEUE_CONNECTION: sync
+      BROADCAST_CONNECTION: 'null'
+      SANCTUM_STATEFUL_DOMAINS: localhost:8092,localhost:5173,127.0.0.1:5173
+      ACCOUNTS_URL: http://localhost:8093
+      CHAT_URL: ''
+      MUSIC_URL: ''
+      DAILY_URL: http://localhost:8092
+      LOG_CHANNEL: stderr
+    ports:
+      - '127.0.0.1:8093:3000'
+    volumes:
+      - database:/app/data
+
+  daily-ui:
+    build:
+      context: ..
+      args:
+        VITE_ACCOUNTS_URL: http://localhost:8093
+    image: daily-ui:dev
+    ports:
+      - '127.0.0.1:8092:80'
+    depends_on: [hms]
+
+volumes:
+  database:

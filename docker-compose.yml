@@ -1,0 +1,12 @@
+name: daily
+
+services:
+  daily-ui:
+    build: .
+    container_name: daily-ui
+    restart: unless-stopped
+    networks: [edge]
+
+networks:
+  edge:
+    external: true
