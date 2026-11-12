@@ -1,4 +1,8 @@
 :root {
+  --card-header-padding: 26px;
+  --journal-header-height: 72px;
+  --motion-duration: 280ms;
+  --motion-easing: ease-out;
   font-family:
     Inter,
     ui-sans-serif,
@@ -169,12 +173,14 @@ small,
   gap: 8px;
   align-items: center;
 }
-.app-header nav > button {
+.app-header nav > button,
+.account-button {
   background: transparent;
   color: var(--muted);
   font-size: 13px;
 }
-.app-header nav > button:hover {
+.app-header nav > button:hover,
+.account-button:hover {
   color: var(--text);
   background: var(--raised);
 }
@@ -182,6 +188,32 @@ small,
   display: flex;
   align-items: center;
   gap: 9px;
+}
+.profile-menu {
+  position: relative;
+}
+.profile-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 170px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px #0003;
+}
+.profile-menu-panel button {
+  display: block;
+  width: 100%;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+}
+.profile-menu-panel button:hover,
+.profile-menu-panel button:focus-visible {
+  background: var(--hover);
 }
 .avatar {
   display: grid;
@@ -245,6 +277,42 @@ small,
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px 1px;
 }
+.calendar-viewport {
+  display: grid;
+  overflow: hidden;
+  --calendar-enter: 100%;
+  --calendar-exit: -100%;
+}
+.calendar-slide-backward {
+  --calendar-enter: -100%;
+  --calendar-exit: 100%;
+}
+.calendar-viewport > .month-grid {
+  grid-area: 1 / 1;
+}
+.calendar-incoming {
+  animation: calendar-in var(--motion-duration) var(--motion-easing) both;
+}
+.calendar-outgoing {
+  animation: calendar-out var(--motion-duration) var(--motion-easing) both;
+  pointer-events: none;
+}
+@keyframes calendar-in {
+  from {
+    transform: translateY(var(--calendar-enter));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes calendar-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(var(--calendar-exit));
+  }
+}
 .month-controls button,
 .day-nav {
   display: grid;
@@ -289,90 +357,66 @@ small,
   background: var(--accent);
   border-radius: 50%;
 }
-.sidebar-nav {
-  border-top: 1px solid var(--line);
-  margin-top: 30px;
-  padding-top: 20px;
-  display: grid;
-  gap: 6px;
-}
-.sidebar-nav button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: transparent;
-  font-size: 13px;
-  text-align: left;
-  color: var(--muted);
-  padding: 12px 8px;
-}
-.sidebar-nav button:hover {
-  background: var(--raised);
-  color: var(--text);
-}
-.sidebar-nav button span:last-child {
-  margin-left: auto;
-  font-size: 12px;
-}
-.sidebar-note {
-  border-top: 1px solid var(--line);
-  padding: 28px 8px 10px;
-  margin-top: 26px;
-}
-.sidebar-note > span {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: var(--muted);
-}
-.sidebar-note p {
-  margin-top: 12px;
-  font-family: Georgia, serif;
-  font-style: italic;
-  font-size: 19px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-.hms-link {
-  display: inline-block;
-  margin: 12px 8px;
-  font-size: 11px;
-  color: var(--muted);
-}
 .day-panel {
   padding: 42px 54px;
   min-width: 0;
 }
 .day-heading {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: 85px minmax(0, 1fr) 85px;
   align-items: center;
   margin-bottom: 32px;
   gap: 10px;
 }
 .day-date {
+  display: grid;
   min-width: 0;
   text-align: center;
+  overflow: hidden;
+  --date-enter: 100%;
+  --date-exit: -100%;
 }
-.eyebrow {
-  font-size: 9px;
-  letter-spacing: 1.8px;
-  color: var(--muted);
-  font-weight: 550;
+.day-next-controls {
+  display: flex;
+  gap: 5px;
 }
-.day-heading h1 {
+.date-slide-backward {
+  --date-enter: -100%;
+  --date-exit: 100%;
+}
+.day-date > h1,
+.date-outgoing {
+  grid-area: 1 / 1;
+}
+.date-incoming {
+  animation: date-in var(--motion-duration) var(--motion-easing) both;
+}
+.date-outgoing {
+  animation: date-out var(--motion-duration) var(--motion-easing) both;
+}
+@keyframes date-in {
+  from {
+    transform: translateX(var(--date-enter));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes date-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--date-exit));
+  }
+}
+.day-heading h1,
+.day-heading .date-outgoing {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(25px, 3vw, 34px);
   font-weight: 400;
   letter-spacing: -0.8px;
   margin: 9px 0 10px;
-}
-.day-heading p {
-  color: var(--muted);
-  font-size: 11px;
-  margin: 0;
-}
-.day-heading p span {
-  margin: 0 6px;
 }
 .day-sections {
   display: grid;
@@ -385,17 +429,37 @@ small,
   border-radius: 14px;
   overflow: hidden;
 }
-.activity-card {
-  padding: 23px 26px;
-}
 .activity-card > header {
+  position: relative;
+}
+.activity-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 12px;
+  width: 100%;
+  height: calc(var(--journal-header-height) - 2px);
+  padding: 12px var(--card-header-padding);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+.activity-title:hover {
+  background: var(--hover);
+}
+.activity-add {
+  position: absolute;
+  right: calc(var(--card-header-padding) + 28px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.activity-content {
+  padding: 0 26px 20px;
 }
 .activity-card h2 {
-  margin: 6px 0 8px;
+  margin: 0;
+  font-size: 17px;
+  padding-right: 80px;
 }
 .activity-card h2 small {
   font-size: 11px;
@@ -484,30 +548,83 @@ small,
   color: var(--muted);
   margin: 12px 0 6px;
 }
-.journal-card > header {
-  padding: 22px 26px 0;
+.journal-manager {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  height: var(--journal-header-height);
+  padding: 12px var(--card-header-padding);
+  text-align: left;
+  font-size: 17px;
+  font-weight: 550;
+}
+.activity-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border-radius: 9px;
+  background: var(--field);
+}
+.activity-tabs button {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+}
+.activity-tabs button[aria-selected='true'] {
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 .journal-title {
   display: flex;
   align-items: center;
   gap: 11px;
   width: 100%;
+  height: calc(var(--journal-header-height) - 2px);
   background: transparent;
-  padding: 0 0 12px;
+  padding: 12px var(--card-header-padding);
+  border: 0;
+  border-radius: 0;
   text-align: left;
 }
-.journal-title:hover {
-  background: transparent;
+.journal-heading-text {
+  min-width: 0;
+  flex: 1;
 }
-.journal-card.collapsed > header {
-  padding-bottom: 22px;
+.journal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
 }
-.journal-card.collapsed .journal-title {
-  padding-bottom: 0;
+.journal-title:hover,
+.journal-manager:hover {
+  background: var(--hover);
+}
+.journal-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--motion-duration) var(--motion-easing),
+    visibility var(--motion-duration);
+}
+.journal-body-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.journal-card.collapsed .journal-body,
+.activity-card.collapsed .activity-body {
+  grid-template-rows: 0fr;
+  visibility: hidden;
 }
 .journal-title h2 {
   margin: 0;
   font-size: 17px;
+  line-height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .journal-title small {
   font-size: 10px;
@@ -515,17 +632,27 @@ small,
 .journal-symbol {
   color: var(--accent);
   font-size: 20px;
+  flex-shrink: 0;
 }
 .collapse-icon {
   margin-left: auto;
   font-size: 16px;
   color: var(--muted);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
 }
 .journal-prompt {
+  display: block;
   font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
   color: var(--muted);
-  padding: 0 26px;
-  margin-bottom: 17px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .editor-toolbar {
   display: flex;
@@ -551,16 +678,13 @@ small,
   flex: 1;
 }
 .tiptap {
+  position: relative;
   padding: 20px 26px;
   min-height: 165px;
   font-size: 14px;
   line-height: 1.8;
   outline: none;
   overflow-wrap: anywhere;
-}
-.tiptap:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
 }
 .tiptap p {
   margin-bottom: 10px;
@@ -599,7 +723,7 @@ small,
 .tiptap li p {
   margin: 0;
 }
-.journal-card > footer {
+.journal-body-inner > footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -614,7 +738,7 @@ small,
 .save-error {
   color: var(--danger);
 }
-.journal-card > footer small {
+.journal-body-inner > footer small {
   font-size: 10px;
   opacity: 0.65;
 }
@@ -627,13 +751,6 @@ small,
 .draft-warning button {
   font-size: 12px;
   margin-right: 6px;
-}
-.day-footer {
-  color: var(--muted);
-  font-size: 11px;
-  text-align: center;
-  margin: 8px 0 0;
-  opacity: 0.65;
 }
 .editor-expanded {
   position: fixed;
@@ -703,6 +820,91 @@ select {
   gap: 8px;
   margin-top: 24px;
   flex-wrap: wrap;
+}
+.select-field {
+  position: relative;
+  margin: 16px 0;
+}
+.select-field > label {
+  margin: 0 0 8px;
+}
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--text);
+  padding: 11px 12px;
+  text-align: left;
+}
+.select-trigger > span:first-child {
+  overflow-wrap: anywhere;
+}
+.select-trigger:hover,
+.select-trigger:focus-visible,
+input:not([type='checkbox']):hover,
+input:not([type='checkbox']):focus-visible {
+  background: var(--field);
+  border-color: var(--muted);
+  outline: none;
+}
+.select-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  z-index: 1;
+  max-height: min(260px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--text);
+  box-shadow: 0 8px 24px #0003;
+}
+.select-menu::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+.select-group-label {
+  padding: 12px 9px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+}
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 9px;
+  border-radius: 5px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.select-option.active {
+  background: var(--hover);
+}
+.select-option[aria-selected='true'] {
+  color: var(--accent);
+}
+.select-option[aria-disabled='true'] {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.select-option small {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+.select-check {
+  margin-left: auto;
 }
 .manage-list {
   margin: 18px 0;
@@ -800,11 +1002,15 @@ hr {
   .app-header {
     padding: 0 25px;
   }
-  .day-heading h1 {
+  .day-heading h1,
+  .day-heading .date-outgoing {
     font-size: 27px;
   }
 }
 @media (max-width: 720px) {
+  :root {
+    --card-header-padding: 19px;
+  }
   .app-header {
     height: 72px;
     padding: 0 16px;
@@ -825,7 +1031,8 @@ hr {
   .app-header nav {
     gap: 2px;
   }
-  .app-header nav > button {
+  .app-header nav > button,
+  .account-button {
     padding: 8px;
     font-size: 12px;
   }
@@ -885,59 +1092,28 @@ hr {
   .week-strip small {
     font-size: 10px;
   }
-  .sidebar-nav {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    border: 0;
-    padding-top: 0;
-    margin-top: 15px;
-  }
-  .sidebar-nav button {
-    padding: 7px 0;
-    gap: 7px;
-    font-size: 11px;
-  }
-  .sidebar-nav button span:last-child {
-    display: none;
-  }
-  .sidebar-note,
-  .hms-link {
-    display: none;
-  }
   .day-panel {
     padding: 28px 16px;
   }
   .day-heading {
     margin-bottom: 24px;
   }
-  .day-heading h1 {
+  .day-heading h1,
+  .day-heading .date-outgoing {
     font-size: 27px;
-  }
-  .day-heading p {
-    font-size: 10px;
-  }
-  .day-heading p span {
-    margin: 0 3px;
   }
   .day-sections {
     gap: 17px;
   }
-  .activity-card {
-    padding: 19px;
+  .activity-content {
+    padding: 0 19px 19px;
   }
   .activity-label {
     display: grid;
     gap: 5px;
   }
-  .journal-card > header {
-    padding: 20px 19px 0;
-  }
-  .journal-card.collapsed > header {
-    padding-bottom: 20px;
-  }
-  .journal-prompt {
-    padding: 0 19px;
+  .journal-manager {
+    font-size: 16px;
   }
   .journal-title h2 {
     font-size: 16px;
@@ -946,7 +1122,7 @@ hr {
     padding: 20px;
     min-height: 170px;
   }
-  .journal-card > footer {
+  .journal-body-inner > footer {
     padding: 12px 19px;
   }
   .editor-toolbar {
@@ -961,7 +1137,14 @@ hr {
 }
 @media (prefers-reduced-motion: reduce) {
   * {
+    animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+  .date-outgoing {
+    display: none;
+  }
+  .calendar-viewport > .calendar-outgoing {
+    display: none;
   }
 }

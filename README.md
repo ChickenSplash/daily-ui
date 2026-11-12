@@ -2,6 +2,8 @@
 
 A quiet place for daily writing, gratitude and simple activity checklists. A separate React frontend for the [Homelab Management System](https://github.com/ChickenSplash/homelab-management-system), using the same shared sign-in as Chat and Music.
 
+Production hostname: <https://daily.chickensplash.dpdns.org>.
+
 ## Features
 
 - Month calendar and selected-day panel on desktop, compact week strip on mobile.
@@ -12,6 +14,10 @@ A quiet place for daily writing, gratitude and simple activity checklists. A sep
 - Weekly routines with effective dates and historical target snapshots.
 - Journal management, activity archiving and confirmed deletion of archived activities, timezone settings, dark/light themes and export.
 - A minimal calendar: centred date numbers and a single dot for today, without activity or journal badges.
+- Shared 280 ms ease-out animations for day navigation, month navigation and collapsible journals/activities, with reduced-motion support.
+- Previous-day content stays visible but cannot be edited while another day loads.
+- Activity creation and management share a tabbed dialog. All dropdowns are themed, keyboard-accessible popovers that scroll independently of their modal.
+- Compact journal headers include their prompt; journal management sits below them. Settings and logout live in the profile menu.
 - Registered users and guests both supported. Guest data is temporary and cascades on account deletion.
 
 ## Stack
@@ -76,8 +82,8 @@ npx playwright install chromium firefox
 
 1. Review and deploy the matching HMS Daily module. Back up its SQLite database before migrations.
 2. Deploy this repository with `docker compose up -d --build` on the existing `edge` network.
-3. Point the chosen tunnel hostname at `http://daily-ui:80`.
-4. Set HMS `DAILY_URL` to the frontend's HTTPS origin and add its host to `SANCTUM_STATEFUL_DOMAINS`. No Reverb configuration is needed.
+3. Point the tunnel hostname `daily.chickensplash.dpdns.org` at `http://daily-ui:80`.
+4. Set HMS `DAILY_URL=https://daily.chickensplash.dpdns.org` and add `daily.chickensplash.dpdns.org` to `SANCTUM_STATEFUL_DOMAINS`, retaining the Chat and Music hosts. No Reverb configuration is needed.
 5. Verify sign-in, ownership isolation, exports and scheduled `daily:sync`.
 6. Confirm automated SQLite backups and an off-host restore test before using it for important writing. Filesystem copies of a live WAL database are not sufficient; use SQLite's backup API or `VACUUM INTO`.
 

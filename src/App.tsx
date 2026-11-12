@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './lib/api'
-import { ACCOUNTS_URL, goToSignIn } from './lib/accounts'
-import { addDays, displayDate, validDate } from './lib/dates'
+import { goToSignIn } from './lib/accounts'
+import { addDays, displayDate, displayDayHeading, validDate } from './lib/dates'
 import { Drafts } from './lib/drafts'
 import type { Bootstrap, Day, User } from './lib/types'
 import { Calendar } from './components/Calendar'
 import { JournalEditor } from './components/JournalEditor'
 import { Activities } from './components/Activities'
-import { ManageActivities, ManageJournals, Settings } from './components/Manage'
+import { ManageJournals, Settings } from './components/Manage'
 import { Dialog } from './components/Dialog'
+import { ProfileMenu } from './components/ProfileMenu'
 
 export default function App() {
   const me = useQuery({
@@ -57,7 +58,8 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
     return validDate(date) ? date : data.today
   })
   const [month, setMonth] = useState(selected.slice(0, 7))
-  const [modal, setModal] = useState<'journals' | 'activities' | 'settings' | 'logout' | null>(null)
+  const [dateSlide, setDateSlide] = useState<{ from: string; direction: 'forward' | 'backward' } | null>(null)
+  const [modal, setModal] = useState<'journals' | 'settings' | 'logout' | null>(null)
   const [logoutError, setLogoutError] = useState('')
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [theme, setTheme] = useState(() => {
@@ -71,9 +73,11 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
   const day = useQuery({
     queryKey: ['day', user.id, selected],
     queryFn: () => api<Day>('GET', `/api/daily/days/${selected}`),
+    placeholderData: keepPreviousData,
   })
   function select(date: string) {
     if (validDate(date)) {
+      if (date !== selected) setDateSlide({ from: selected, direction: date > selected ? 'forward' : 'backward' })
       setSelected(date)
       setMonth(date.slice(0, 7))
       void drafts.flush()
@@ -114,7 +118,6 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
       document.removeEventListener('visibilitychange', visibility)
     }
   }, [drafts])
-  const completion = day.data?.activities.filter((activity) => activity.status === 'completed').length ?? 0
   return (
     <>
       <a className="skip-link" href="#day-content">
@@ -128,26 +131,20 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
           </span>
         </a>
         <nav aria-label="Account">
-          <button onClick={() => select(data.today)}>Today</button>
           <button
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           >
             {theme === 'dark' ? '☀' : '☾'}
           </button>
-          <button onClick={() => setModal('settings')}>Settings</button>
-          <button
-            className="account-button"
-            aria-label={user.display_name}
-            title="Account · log out"
-            onClick={() => {
+          <ProfileMenu
+            user={user}
+            settings={() => setModal('settings')}
+            logout={() => {
               setLogoutError('')
               setModal('logout')
             }}
-          >
-            <span className="avatar">{user.display_name.slice(0, 1).toUpperCase()}</span>
-            <span>{user.display_name}</span>
-          </button>
+          />
         </nav>
       </header>
       {user.is_guest && (
@@ -159,52 +156,49 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
       <div className="app-layout">
         <aside className="sidebar">
           <Calendar month={month} setMonth={setMonth} selected={selected} today={data.today} select={select} />
-          <nav className="sidebar-nav" aria-label="Manage">
-            <button onClick={() => setModal('journals')}>
-              <span>▤</span> Manage journals <span>↗</span>
-            </button>
-            <button onClick={() => setModal('activities')}>
-              <span>✓</span> Manage activities <span>↗</span>
-            </button>
-          </nav>
-          <div className="sidebar-note">
-            <span>ONE DAY AT A TIME</span>
-            <p>
-              Small things count.
-              <br />
-              There’s no perfect way to begin.
-            </p>
-          </div>
-          <a className="hms-link" href={ACCOUNTS_URL}>
-            ← Your homelab apps
-          </a>
         </aside>
         <main id="day-content" className="day-panel">
           <header className="day-heading">
             <button className="day-nav" aria-label="Previous day" onClick={() => select(addDays(selected, -1))}>
               ‹
             </button>
-            <div className="day-date">
-              <span className="eyebrow">
-                {selected === data.today
-                  ? 'YOUR SPACE FOR TODAY'
-                  : selected > data.today
-                    ? 'A LITTLE LOOK AHEAD'
-                    : 'A DAY TO REMEMBER'}
-              </span>
-              <h1>{displayDate(selected).replace(/,? \d{4}$/, '')}</h1>
-              <p>
-                {selected.slice(0, 4)} <span>·</span> {data.timezone.replace(/_/g, ' ')}{' '}
-                {day.data?.activities.length ? (
-                  <>
-                    <span>·</span> {completion} of {day.data.activities.length} activities complete
-                  </>
-                ) : null}
-              </p>
+            <div className={`day-date ${dateSlide ? `date-slide-${dateSlide.direction}` : ''}`}>
+              {dateSlide && (
+                <span key={`out-${selected}`} className="date-outgoing" aria-hidden="true">
+                  {displayDayHeading(dateSlide.from)}
+                </span>
+              )}
+              <h1
+                key={selected}
+                className={dateSlide ? 'date-incoming' : undefined}
+                onAnimationEnd={() => setDateSlide(null)}
+              >
+                {displayDayHeading(selected)}
+              </h1>
             </div>
-            <button className="day-nav" aria-label="Next day" onClick={() => select(addDays(selected, 1))}>
-              ›
-            </button>
+            <div className="day-next-controls">
+              <button className="day-nav" aria-label="Next day" onClick={() => select(addDays(selected, 1))}>
+                ›
+              </button>
+              <button className="day-nav day-today" aria-label="Today" title="Today" onClick={() => select(data.today)}>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <rect x="3" y="5" width="18" height="16" rx="3" />
+                  <path d="M7 3v4M17 3v4M3 10h18" />
+                  <circle cx="12" cy="15.5" r="1.5" fill="currentColor" stroke="none" />
+                </svg>
+              </button>
+            </div>
           </header>
           {day.isPending && (
             <p className="muted" role="status">
@@ -217,32 +211,36 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
             </p>
           )}
           {day.data && (
-            <div className="day-sections">
+            <div className="day-sections" inert={day.isPlaceholderData} aria-busy={day.isPlaceholderData}>
               <Activities
-                key={selected}
+                key={day.data.date}
                 items={day.data.activities}
-                date={selected}
-                activities={data.activities}
+                date={day.data.date}
+                data={data}
                 changed={changed}
-                manage={() => setModal('activities')}
               />
               {day.data.journals.map((journal) => (
-                <JournalEditor key={`${selected}/${journal.id}`} journal={journal} date={selected} drafts={drafts} />
+                <JournalEditor
+                  key={`${day.data.date}/${journal.id}`}
+                  journal={journal}
+                  date={day.data.date}
+                  drafts={drafts}
+                />
               ))}
-              {!day.data.journals.length && (
-                <section className="journal-card empty-activities">
-                  <h2>A space for your thoughts</h2>
-                  <p>Create a journal to start writing.</p>
-                  <button onClick={() => setModal('journals')}>＋ Create journal</button>
-                </section>
-              )}
-              <p className="day-footer">A record of your days. Just for you.</p>
+              <button className="journal-card journal-manager" onClick={() => setModal('journals')}>
+                <span className="journal-symbol" aria-hidden="true">
+                  ▤
+                </span>
+                <span>Manage journals</span>
+                <span className="collapse-icon" aria-hidden="true">
+                  ＋
+                </span>
+              </button>
             </div>
           )}
         </main>
       </div>
       {modal === 'journals' && <ManageJournals data={data} changed={changed} close={() => setModal(null)} />}
-      {modal === 'activities' && <ManageActivities data={data} changed={changed} close={() => setModal(null)} />}
       {modal === 'settings' && <Settings data={data} user={user} changed={changed} close={() => setModal(null)} />}
       {modal === 'logout' && (
         <Dialog

@@ -10,6 +10,12 @@ export function addDays(date: string, amount: number): string {
 }
 export const displayDate = (date: string) =>
   parseDate(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+export function displayDayHeading(date: string): string {
+  const value = parseDate(date)
+  const day = value.getDate()
+  const suffix = day % 100 >= 11 && day % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][day % 10] ?? 'th')
+  return `${value.toLocaleDateString('en-GB', { weekday: 'long' })}, ${day}${suffix} ${value.toLocaleDateString('en-GB', { month: 'long' })} ${value.getFullYear()}`
+}
 export function monthGrid(month: string): string[] {
   const first = parseDate(`${month}-01`)
   const start = addDays(dateKey(first), -((first.getDay() + 6) % 7))

@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { download, units } from '../lib/dates'
 import type { Activity, Bootstrap, Journal, Unit, User } from '../lib/types'
 import { Dialog } from './Dialog'
+import { Select } from './Select'
 
 type Props = { data: Bootstrap; changed: () => void; close: () => void }
 const message = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong. Please try again.')
@@ -187,7 +188,7 @@ function JournalForm({ journal, close, saved }: { journal: Journal | 'new'; clos
   )
 }
 
-export function ManageActivities({ data, changed, close }: Props) {
+export function ManageActivities({ data, changed }: Omit<Props, 'close'>) {
   const [editing, setEditing] = useState<Activity | null>(null)
   const [deleting, setDeleting] = useState<Activity | null>(null)
   const [deleteError, setDeleteError] = useState('')
@@ -195,7 +196,7 @@ export function ManageActivities({ data, changed, close }: Props) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   return (
-    <Dialog title="Manage activities" close={close}>
+    <>
       <p>Create activities and choose which days they repeat. Daily totals stay separate from your routine.</p>
       {error && (
         <p className="error" role="alert">
@@ -320,11 +321,12 @@ export function ManageActivities({ data, changed, close }: Props) {
           </div>
         </Dialog>
       )}
-    </Dialog>
+    </>
   )
 }
 
 function NewActivity({ close, saved }: { close: () => void; saved: (activity: Activity) => void }) {
+  const [unit, setUnit] = useState<Unit>('repetitions')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   return (
@@ -337,7 +339,7 @@ function NewActivity({ close, saved }: { close: () => void; saved: (activity: Ac
           try {
             const activity = await api<Activity>('POST', '/api/daily/activities', {
               name: data.get('name'),
-              unit: data.get('unit'),
+              unit,
             })
             saved({ ...activity, rules: [] })
           } catch (error) {
@@ -351,15 +353,18 @@ function NewActivity({ close, saved }: { close: () => void; saved: (activity: Ac
           Name
           <input name="name" maxLength={100} placeholder="Push-ups" required />
         </label>
-        <label>
-          Track by
-          <select name="unit">
-            <option value="repetitions">Repetitions</option>
-            <option value="metres">Distance (metres)</option>
-            <option value="seconds">Time (seconds)</option>
-            <option value="checkbox">Just a checkbox</option>
-          </select>
-        </label>
+        <Select
+          label="Track by"
+          value={unit}
+          onChange={(value) => setUnit(value as Unit)}
+          disabled={busy}
+          options={[
+            { value: 'repetitions', label: 'Repetitions' },
+            { value: 'metres', label: 'Distance (metres)' },
+            { value: 'seconds', label: 'Time (seconds)' },
+            { value: 'checkbox', label: 'Just a checkbox' },
+          ]}
+        />
         <p className="muted">The measurement unit cannot change later, keeping historical totals meaningful.</p>
         {error && (
           <p className="error" role="alert">
@@ -494,6 +499,7 @@ function ScheduleForm({
 }
 
 export function Settings({ data, user, changed, close }: Props & { user: User }) {
+  const [timezone, setTimezone] = useState(data.timezone)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const zones = Array.from(new Set(['Europe/London', data.timezone, ...Intl.supportedValuesOf('timeZone')])).sort()
@@ -506,11 +512,10 @@ export function Settings({ data, user, changed, close }: Props & { user: User })
       <form
         onSubmit={async (event) => {
           event.preventDefault()
-          const form = new FormData(event.currentTarget)
           setBusy(true)
           setError('')
           try {
-            await api('PATCH', '/api/daily/settings', { timezone: form.get('timezone') })
+            await api('PATCH', '/api/daily/settings', { timezone })
             changed()
           } catch (error) {
             setError(message(error))
@@ -519,14 +524,13 @@ export function Settings({ data, user, changed, close }: Props & { user: User })
           }
         }}
       >
-        <label>
-          Your timezone
-          <select name="timezone" defaultValue={data.timezone}>
-            {zones.map((zone) => (
-              <option key={zone}>{zone}</option>
-            ))}
-          </select>
-        </label>
+        <Select
+          label="Your timezone"
+          value={timezone}
+          onChange={setTimezone}
+          disabled={busy}
+          options={zones.map((zone) => ({ value: zone, label: zone }))}
+        />
         <p className="muted">Determines “today” and your daily checklist. Existing entry dates do not move.</p>
         <button className="primary" disabled={busy}>
           Save timezone

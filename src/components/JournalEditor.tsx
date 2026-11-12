@@ -125,6 +125,7 @@ export function JournalEditor({ journal, date, drafts }: { journal: Journal; dat
         <button
           className="journal-title"
           aria-expanded={!collapsed}
+          aria-controls={`journal-body-${journal.id}`}
           onClick={() => {
             const value = !collapsed
             setCollapsed(value)
@@ -136,14 +137,22 @@ export function JournalEditor({ journal, date, drafts }: { journal: Journal; dat
           }}
         >
           <span className="journal-symbol">{journal.position === 1 ? '✧' : '▤'}</span>
-          <h2>{journal.name}</h2>
-          {journal.archived_at && <small>Archived</small>}
+          <span className="journal-heading-text">
+            <span className="journal-title-row">
+              <h2 title={journal.name}>{journal.name}</h2>
+              {journal.archived_at && <small>Archived</small>}
+            </span>
+            {journal.prompt && (
+              <span className="journal-prompt" title={journal.prompt}>
+                {journal.prompt}
+              </span>
+            )}
+          </span>
           <span className="collapse-icon">{collapsed ? '＋' : '−'}</span>
         </button>
       </header>
-      {!collapsed && (
-        <>
-          <p className="journal-prompt">{journal.prompt}</p>
+      <div className="journal-body" id={`journal-body-${journal.id}`} inert={collapsed} aria-hidden={collapsed}>
+        <div className="journal-body-inner">
           {toolbar}
           <EditorContent editor={editor} />
           <footer>
@@ -170,8 +179,8 @@ export function JournalEditor({ journal, date, drafts }: { journal: Journal; dat
               <button onClick={() => setDiscard(true)}>Use saved version</button>
             </div>
           )}
-        </>
-      )}
+        </div>
+      </div>
       {discard && (
         <Dialog title="Use the saved version?" close={() => setDiscard(false)}>
           <p>Your unsaved draft will be replaced. Download it first if you want to keep a copy.</p>
