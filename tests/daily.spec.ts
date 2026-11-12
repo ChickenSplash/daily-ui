@@ -292,6 +292,56 @@ test('archived activities can be deleted with confirmation or kept by cancelling
   await expect(item).toHaveCount(0)
 })
 
+test('day arrows flank the centred date and editor focus stays inside the writing area', async ({ page }, testInfo) => {
+  await join(page)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const previous = page.getByRole('button', { name: 'Previous day', exact: true })
+  const next = page.getByRole('button', { name: 'Next day', exact: true })
+  const positions = await page.locator('.day-heading').evaluate((element) => {
+    const header = element.getBoundingClientRect()
+    const previous = element.querySelector('[aria-label="Previous day"]')!.getBoundingClientRect()
+    const date = element.querySelector('.day-date')!.getBoundingClientRect()
+    const next = element.querySelector('[aria-label="Next day"]')!.getBoundingClientRect()
+    return {
+      left: Math.abs(previous.x - header.x),
+      right: Math.abs(next.right - header.right),
+      centre: Math.abs(date.x + date.width / 2 - (header.x + header.width / 2)),
+      ordered: previous.right <= date.left && date.right <= next.left,
+    }
+  })
+  expect(positions.left).toBeLessThan(1)
+  expect(positions.right).toBeLessThan(1)
+  expect(positions.centre).toBeLessThan(1)
+  expect(positions.ordered).toBe(true)
+  const month = page.getByRole('button', { name: 'Previous month', exact: true })
+  await month.hover()
+  const expected = await month.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { width: style.width, height: style.height, radius: style.borderRadius, background: style.backgroundColor }
+  })
+  for (const arrow of [previous, next]) {
+    await arrow.hover()
+    await expect(arrow).toHaveCSS('width', expected.width)
+    await expect(arrow).toHaveCSS('height', expected.height)
+    await expect(arrow).toHaveCSS('border-radius', expected.radius)
+    await expect(arrow).toHaveCSS('background-color', expected.background)
+  }
+  const editor = page.getByRole('textbox', { name: 'Daily journal', exact: true })
+  await editor.fill('The focus border should stay below the toolbar.')
+  await expect(editor).toBeFocused()
+  await expect(editor).toHaveCSS('outline-offset', '-2px')
+  await expect(editor).toHaveCSS('outline-style', 'solid')
+  const gap = await section(page).evaluate(
+    (element) =>
+      element.querySelector('.tiptap')!.getBoundingClientRect().top -
+      element.querySelector('.editor-toolbar')!.getBoundingClientRect().bottom,
+  )
+  expect(gap).toBeGreaterThanOrEqual(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  if (testInfo.project.name !== 'firefox')
+    await page.screenshot({ path: `/tmp/opencode/daily-date-editor-${testInfo.project.name}.png`, fullPage: true })
+})
+
 test('month heading and arrows have padded hover areas matching the days', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await join(page)

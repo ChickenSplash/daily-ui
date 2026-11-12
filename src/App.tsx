@@ -181,7 +181,10 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
         </aside>
         <main id="day-content" className="day-panel">
           <header className="day-heading">
-            <div>
+            <button className="day-nav" aria-label="Previous day" onClick={() => select(addDays(selected, -1))}>
+              ‹
+            </button>
+            <div className="day-date">
               <span className="eyebrow">
                 {selected === data.today
                   ? 'YOUR SPACE FOR TODAY'
@@ -199,14 +202,9 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
                 ) : null}
               </p>
             </div>
-            <div className="day-controls">
-              <button aria-label="Previous day" onClick={() => select(addDays(selected, -1))}>
-                ‹
-              </button>
-              <button aria-label="Next day" onClick={() => select(addDays(selected, 1))}>
-                ›
-              </button>
-            </div>
+            <button className="day-nav" aria-label="Next day" onClick={() => select(addDays(selected, 1))}>
+              ›
+            </button>
           </header>
           {day.isPending && (
             <p className="muted" role="status">
