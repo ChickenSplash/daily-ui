@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './lib/api'
 import { ACCOUNTS_URL, goToSignIn } from './lib/accounts'
-import { addDays, displayDate, monthGrid, validDate } from './lib/dates'
+import { addDays, displayDate, validDate } from './lib/dates'
 import { Drafts } from './lib/drafts'
-import type { Bootstrap, Day, Summary, User } from './lib/types'
+import type { Bootstrap, Day, User } from './lib/types'
 import { Calendar } from './components/Calendar'
 import { JournalEditor } from './components/JournalEditor'
 import { Activities } from './components/Activities'
@@ -67,25 +67,10 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
       return 'dark'
     }
   })
-  const drafts = useMemo(
-    () =>
-      new Drafts(user.id, () => {
-        void client.invalidateQueries({ queryKey: ['calendar'] })
-      }),
-    [user.id, client],
-  )
-  const grid = monthGrid(month)
+  const drafts = useMemo(() => new Drafts(user.id), [user.id])
   const day = useQuery({
     queryKey: ['day', user.id, selected],
     queryFn: () => api<Day>('GET', `/api/daily/days/${selected}`),
-  })
-  const calendar = useQuery({
-    queryKey: ['calendar', user.id, month],
-    queryFn: () =>
-      api<Summary[]>(
-        'GET',
-        `/api/daily/calendar?from=${grid[0] < '1900-01-01' ? '1900-01-01' : grid[0]}&to=${grid[41] > '2100-12-31' ? '2100-12-31' : grid[41]}`,
-      ),
   })
   function select(date: string) {
     if (validDate(date)) {
@@ -97,7 +82,6 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
   function changed() {
     void client.invalidateQueries({ queryKey: ['bootstrap'] })
     void client.invalidateQueries({ queryKey: ['day'] })
-    void client.invalidateQueries({ queryKey: ['calendar'] })
   }
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -174,19 +158,7 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
       )}
       <div className="app-layout">
         <aside className="sidebar">
-          <Calendar
-            month={month}
-            setMonth={setMonth}
-            selected={selected}
-            today={data.today}
-            select={select}
-            summaries={calendar.data ?? []}
-          />
-          {calendar.error && (
-            <p className="error" role="alert">
-              Calendar couldn’t load. <button onClick={() => void calendar.refetch()}>Retry</button>
-            </p>
-          )}
+          <Calendar month={month} setMonth={setMonth} selected={selected} today={data.today} select={select} />
           <nav className="sidebar-nav" aria-label="Manage">
             <button onClick={() => setModal('journals')}>
               <span>▤</span> Manage journals <span>↗</span>

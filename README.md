@@ -10,7 +10,8 @@ A quiet place for daily writing, gratitude and simple activity checklists. A sep
 - Activities measured in repetitions, metres or seconds, or a simple checkbox.
 - Daily totals, partial progress, completion, skip and undo.
 - Weekly routines with effective dates and historical target snapshots.
-- Journal management, activity archiving, timezone settings, dark/light themes and export.
+- Journal management, activity archiving and confirmed deletion of archived activities, timezone settings, dark/light themes and export.
+- A minimal calendar: centred date numbers and a single dot for today, without activity or journal badges.
 - Registered users and guests both supported. Guest data is temporary and cascades on account deletion.
 
 ## Stack

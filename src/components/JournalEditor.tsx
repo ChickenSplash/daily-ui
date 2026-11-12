@@ -117,7 +117,10 @@ export function JournalEditor({ journal, date, drafts }: { journal: Journal; dat
     </div>
   )
   return (
-    <section className={`journal-card ${expanded ? 'editor-expanded' : ''}`} aria-label={`${journal.name} section`}>
+    <section
+      className={`journal-card ${collapsed ? 'collapsed' : ''} ${expanded ? 'editor-expanded' : ''}`}
+      aria-label={`${journal.name} section`}
+    >
       <header>
         <button
           className="journal-title"

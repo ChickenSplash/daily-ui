@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { addDays, dateKey, displayDate, monthGrid, parseDate } from '../lib/dates'
-import type { Summary } from '../lib/types'
 
 export function Calendar({
   month,
@@ -8,19 +7,16 @@ export function Calendar({
   selected,
   today,
   select,
-  summaries,
 }: {
   month: string
   setMonth: (value: string) => void
   selected: string
   today: string
   select: (date: string) => void
-  summaries: Summary[]
 }) {
   const [expanded, setExpanded] = useState(false)
   const container = useRef<HTMLElement>(null)
   const grid = monthGrid(month)
-  const info = new Map(summaries.map((summary) => [summary.date, summary]))
   function shiftMonth(amount: number) {
     const date = parseDate(`${month}-01`)
     date.setMonth(date.getMonth() + amount)
@@ -50,8 +46,7 @@ export function Calendar({
           </span>
         ))}
         {grid.map((date) => {
-          const summary = info.get(date)
-          const label = `${displayDate(date)}${summary?.entries ? `, ${summary.entries} journal entries` : ''}${summary?.total ? `, ${summary.completed} of ${summary.total} activities completed` : ''}`
+          const label = displayDate(date)
           return (
             <button
               key={date}
@@ -78,14 +73,7 @@ export function Calendar({
               }}
             >
               <span>{Number(date.slice(-2))}</span>
-              <span className="date-markers" aria-hidden="true">
-                {summary?.entries ? <i className="writing-dot" /> : null}
-                {summary?.total ? (
-                  <small className={summary.completed === summary.total ? 'all-done' : ''}>
-                    {summary.completed}/{summary.total}
-                  </small>
-                ) : null}
-              </span>
+              {date === today && <i className="today-dot" aria-hidden="true" />}
             </button>
           )
         })}
@@ -98,15 +86,14 @@ export function Calendar({
             onClick={() => select(date)}
             aria-label={displayDate(date)}
             aria-pressed={date === selected}
+            aria-current={date === today ? 'date' : undefined}
           >
             <small>{parseDate(date).toLocaleDateString('en-GB', { weekday: 'short' })}</small>
             {Number(date.slice(-2))}
+            {date === today && <i className="today-dot" aria-hidden="true" />}
           </button>
         ))}
       </div>
-      <p className="calendar-legend">
-        <i className="writing-dot" /> Journal entry <span>0/2 Activities</span>
-      </p>
     </section>
   )
 }

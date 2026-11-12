@@ -189,6 +189,8 @@ function JournalForm({ journal, close, saved }: { journal: Journal | 'new'; clos
 
 export function ManageActivities({ data, changed, close }: Props) {
   const [editing, setEditing] = useState<Activity | null>(null)
+  const [deleting, setDeleting] = useState<Activity | null>(null)
+  const [deleteError, setDeleteError] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -235,6 +237,18 @@ export function ManageActivities({ data, changed, close }: Props) {
               >
                 {activity.archived_on ? 'Restore' : 'Archive'}
               </button>
+              {activity.archived_on && (
+                <button
+                  className="danger-text"
+                  disabled={busy}
+                  onClick={() => {
+                    setDeleteError('')
+                    setDeleting(activity)
+                  }}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -263,6 +277,48 @@ export function ManageActivities({ data, changed, close }: Props) {
             changed()
           }}
         />
+      )}
+      {deleting && (
+        <Dialog
+          title="Permanently delete activity?"
+          close={() => {
+            if (!busy) setDeleting(null)
+          }}
+        >
+          <p>
+            This permanently deletes <strong>{deleting.name}</strong>, its routines and all its daily progress records.
+            This cannot be undone.
+          </p>
+          {deleteError && (
+            <p className="error" role="alert">
+              {deleteError}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <button disabled={busy} onClick={() => setDeleting(null)}>
+              Cancel
+            </button>
+            <button
+              className="danger"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true)
+                setDeleteError('')
+                try {
+                  await api('DELETE', `/api/daily/activities/${deleting.id}`)
+                  setDeleting(null)
+                  changed()
+                } catch (error) {
+                  setDeleteError(message(error))
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              Delete activity
+            </button>
+          </div>
+        </Dialog>
       )}
     </Dialog>
   )
@@ -478,10 +534,7 @@ export function Settings({ data, user, changed, close }: Props & { user: User })
       </form>
       <hr />
       <h3>Your data, yours to keep</h3>
-      <p>
-        Export journals as Markdown text inside a JSON file, together with all routines and daily totals. Individual
-        entries also have a Markdown download button.
-      </p>
+      <p>Export journals as Markdown text inside a JSON file, together with all routines and daily totals.</p>
       <button
         disabled={busy}
         onClick={async () => {
@@ -499,10 +552,6 @@ export function Settings({ data, user, changed, close }: Props & { user: User })
       >
         Download all data
       </button>
-      <p className="muted">
-        Only unsaved recovery drafts are kept in this browser, in plain text until saved. Saved entries live in HMS.
-        This is not end-to-end encrypted.
-      </p>
       {error && (
         <p className="error" role="alert">
           {error}

@@ -250,13 +250,11 @@ small,
   padding-bottom: 15px;
 }
 .date-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  display: grid;
+  place-items: center;
   position: relative;
   height: 48px;
-  padding: 6px 0 0;
+  padding: 0;
   border-radius: 9px;
   background: transparent;
   font-size: 13px;
@@ -264,51 +262,18 @@ small,
 .date-cell.outside {
   opacity: 0.3;
 }
-.date-cell.today:not(.selected) > span:first-child {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
 .date-cell.selected,
 .week-strip .selected {
   background: var(--accent-bg);
-  color: var(--accent);
 }
-.date-cell.selected {
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.date-markers {
-  height: 17px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: 3px;
-}
-.date-markers small {
-  font-size: 8px;
-  color: var(--muted);
-}
-.date-markers small.all-done {
-  color: var(--accent);
-}
-.writing-dot {
-  display: inline-block;
+.today-dot {
+  position: absolute;
+  bottom: 5px;
+  left: calc(50% - 2px);
   width: 4px;
   height: 4px;
   background: var(--accent);
   border-radius: 50%;
-  flex-shrink: 0;
-}
-.calendar-legend {
-  font-size: 10px;
-  color: var(--muted);
-  margin: 20px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.calendar-legend span {
-  margin-left: auto;
 }
 .sidebar-nav {
   border-top: 1px solid var(--line);
@@ -523,6 +488,12 @@ small,
 }
 .journal-title:hover {
   background: transparent;
+}
+.journal-card.collapsed > header {
+  padding-bottom: 22px;
+}
+.journal-card.collapsed .journal-title {
+  padding-bottom: 0;
 }
 .journal-title h2 {
   margin: 0;
@@ -767,7 +738,6 @@ legend {
 .weekday-picker button[aria-pressed='true'] {
   background: var(--accent-bg);
   color: var(--accent);
-  border-color: var(--accent);
 }
 hr {
   border: 0;
@@ -873,15 +843,11 @@ hr {
     display: inline;
     color: var(--muted);
   }
-  .month-grid,
-  .calendar-legend {
+  .month-grid {
     display: none;
   }
   .expanded .month-grid {
     display: grid;
-  }
-  .expanded .calendar-legend {
-    display: flex;
   }
   .expanded .week-strip {
     display: none;
@@ -892,6 +858,7 @@ hr {
     gap: 4px;
   }
   .week-strip button {
+    position: relative;
     display: grid;
     gap: 7px;
     background: transparent;
@@ -954,6 +921,9 @@ hr {
   }
   .journal-card > header {
     padding: 20px 19px 0;
+  }
+  .journal-card.collapsed > header {
+    padding-bottom: 20px;
   }
   .journal-prompt {
     padding: 0 19px;

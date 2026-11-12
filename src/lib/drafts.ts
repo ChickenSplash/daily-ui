@@ -18,10 +18,8 @@ export class Drafts {
   private inFlight = new Set<string>()
   private user: string
   private tab: string
-  private saved: () => void
-  constructor(user: string, saved: () => void) {
+  constructor(user: string) {
     this.user = user
-    this.saved = saved
     this.tab = crypto.randomUUID()
     try {
       this.tab = sessionStorage.getItem('daily-tab') ?? this.tab
@@ -116,7 +114,6 @@ export class Drafts {
       }
       this.values.set(key, next)
       this.persist(key, next)
-      this.saved()
     } catch (error) {
       failed = true
       this.values.set(key, {

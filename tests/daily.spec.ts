@@ -210,3 +210,93 @@ test('raw HTML is inert while code and quotations remain intact', async ({ page 
   expect(result.journals[0].entries[0].body).toContain('<div>Hello</div>')
   expect(await page.evaluate(() => '__dailyXss' in window)).toBe(false)
 })
+
+test('settings keeps the export section concise and downloads all data', async ({ page }) => {
+  await join(page)
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
+  await expect(
+    settings.getByText(
+      'Export journals as Markdown text inside a JSON file, together with all routines and daily totals.',
+      { exact: true },
+    ),
+  ).toBeVisible()
+  await expect(settings).not.toContainText('Individual entries also')
+  await expect(settings).not.toContainText('Only unsaved recovery drafts')
+  const download = page.waitForEvent('download')
+  await settings.getByRole('button', { name: 'Download all data', exact: true }).click()
+  expect((await download).suggestedFilename()).toBe('daily-export.json')
+})
+
+test('archived activities can be deleted with confirmation or kept by cancelling', async ({ page }) => {
+  await join(page)
+  await page
+    .getByRole('navigation', { name: 'Manage', exact: true })
+    .getByRole('button', { name: /Manage activities/ })
+    .click()
+  await page.getByRole('button', { name: '＋ New activity' }).click()
+  const form = page.getByRole('dialog', { name: 'New activity', exact: true })
+  await form.getByLabel('Name', { exact: true }).fill('Temporary activity')
+  await form.getByRole('button', { name: 'Create activity', exact: true }).click()
+  const routine = page.getByRole('dialog', { name: 'Activity and routine' })
+  const tuesday = routine.getByRole('button', { name: 'Tue', exact: true })
+  await tuesday.click()
+  await expect(tuesday).toHaveAttribute('aria-pressed', 'true')
+  await expect(tuesday).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)')
+  await routine.getByRole('button', { name: 'Save routine' }).click()
+  await expect(routine).not.toBeVisible()
+  const manager = page.getByRole('dialog', { name: 'Manage activities', exact: true })
+  const item = manager.locator('.manage-item').filter({ hasText: 'Temporary activity' })
+  await expect(item.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
+  await item.getByRole('button', { name: 'Archive', exact: true }).click()
+  await item.getByRole('button', { name: 'Delete', exact: true }).click()
+  const confirmation = page.getByRole('dialog', { name: 'Permanently delete activity?' })
+  await expect(confirmation).toContainText('all its daily progress records')
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(item).toBeVisible()
+  await item.getByRole('button', { name: 'Delete', exact: true }).click()
+  await confirmation.getByRole('button', { name: 'Delete activity', exact: true }).click()
+  await expect(item).toHaveCount(0)
+})
+
+test('calendar is centred with only a today dot and collapsed journal padding is balanced', async ({
+  page,
+}, testInfo) => {
+  await join(page)
+  const calendar = page.getByRole('region', { name: 'Calendar', exact: true })
+  const expandMonth = async () => {
+    if (!(await calendar.locator('.month-grid').isVisible())) await calendar.locator('.month-title').click()
+  }
+  await expandMonth()
+  const today = calendar.locator('.date-cell[aria-current="date"]')
+  await expect(today.locator('.today-dot')).toHaveCount(1)
+  await expect(calendar.locator('.today-dot:visible')).toHaveCount(1)
+  await expect(calendar.locator('.date-markers, .writing-dot, .calendar-legend')).toHaveCount(0)
+  const other = calendar.locator('.date-cell:not(.today):not(.outside)').first()
+  const ordinaryColour = await other.evaluate((element) => getComputedStyle(element).color)
+  await expect(today).toHaveCSS('color', ordinaryColour)
+  await expect(today.locator('span')).toHaveCSS('text-decoration-line', 'none')
+  const alignment = await today.evaluate((element) => {
+    const cell = element.getBoundingClientRect()
+    const number = element.querySelector('span')!.getBoundingClientRect()
+    return Math.abs(number.y + number.height / 2 - (cell.y + cell.height / 2))
+  })
+  expect(alignment).toBeLessThan(1)
+  await expect(today).toHaveCSS('box-shadow', 'none')
+  await expect(today).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)')
+  await other.click()
+  await expandMonth()
+  await expect(today.locator('.today-dot')).toHaveCount(1)
+  await expect(today).toHaveCSS('color', ordinaryColour)
+  const journal = section(page)
+  await journal.getByRole('button', { name: /Daily journal/ }).click()
+  await expect(journal).toHaveClass(/collapsed/)
+  const spacing = await journal.locator('header').evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { top: style.paddingTop, bottom: style.paddingBottom }
+  })
+  expect(spacing.bottom).toBe(spacing.top)
+  await expect(journal.locator('.journal-title')).toHaveCSS('padding-bottom', '0px')
+  if (testInfo.project.name !== 'firefox')
+    await page.screenshot({ path: `/tmp/opencode/daily-tweaks-${testInfo.project.name}.png`, fullPage: true })
+})
