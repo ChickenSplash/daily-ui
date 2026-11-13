@@ -4,6 +4,8 @@ A quiet place for daily writing, gratitude and simple activity checklists. A sep
 
 Production hostname: <https://daily.chickensplash.dpdns.org>.
 
+Deployed on 13 November 2026. The production smoke check covered shared sign-in, journal autosave/reload, activity completion, export and account isolation; its temporary guest accounts were deleted. A consistent pre-deployment SQLite snapshot was copied off-host and restore-tested. Automatic database backup scheduling remains outstanding.
+
 ## Features
 
 - Month calendar and selected-day panel on desktop, compact week strip on mobile.
