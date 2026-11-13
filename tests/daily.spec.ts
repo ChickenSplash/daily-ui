@@ -79,6 +79,40 @@ test('activity picker is themed and groups already-added activities without allo
   await expect(page.getByRole('region', { name: 'Daily activities', exact: true }).getByRole('checkbox')).toHaveCount(3)
 })
 
+test('editor placeholder only appears for an empty document, never after spaces or line breaks', async ({ page }) => {
+  await join(page)
+  for (const name of ['Daily journal', 'Gratitude journal']) {
+    const editor = page.getByRole('textbox', { name, exact: true })
+    const placeholder = () => editor.evaluate((element) => getComputedStyle(element, '::before').content)
+    await expect(editor).toHaveAttribute('data-empty', 'true')
+    expect(await placeholder()).not.toBe('none')
+    await editor.click()
+    for (const word of ['Hello', 'world', 'again']) {
+      await editor.pressSequentially(word)
+      await editor.press('Space')
+      await expect(editor).toHaveAttribute('data-empty', 'false')
+      expect(await placeholder()).toBe('none')
+    }
+    await editor.press('Shift+Enter')
+    expect(await placeholder()).toBe('none')
+    await editor.press('Enter')
+    expect(await placeholder()).toBe('none')
+    await editor.fill(' ')
+    expect(await placeholder()).toBe('none')
+    await editor.fill('')
+    await expect(editor).toHaveAttribute('data-empty', 'true')
+    expect(await placeholder()).not.toBe('none')
+    await editor.pressSequentially('Keep this text ')
+    await saved(page, name)
+  }
+  await page.reload()
+  for (const name of ['Daily journal', 'Gratitude journal']) {
+    const editor = page.getByRole('textbox', { name, exact: true })
+    await expect(editor).toHaveAttribute('data-empty', 'false')
+    expect(await editor.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('none')
+  }
+})
+
 test('journal prompts stay in the clickable header while only the editor folds', async ({ page }) => {
   await join(page)
   const journal = section(page)

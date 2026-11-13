@@ -39,12 +39,17 @@ export function JournalEditor({ journal, date, drafts }: { journal: Journal; dat
       content: draft.body,
       contentType: 'markdown',
       editorProps: {
-        attributes: {
+        attributes: (state) => ({
           role: 'textbox',
           'aria-label': journal.name,
           'aria-multiline': 'true',
           'data-placeholder': journal.prompt || 'Start writing…',
-        },
+          'data-empty': String(
+            state.doc.childCount === 1 &&
+              state.doc.firstChild?.type.name === 'paragraph' &&
+              state.doc.firstChild.content.size === 0,
+          ),
+        }),
       },
       onUpdate: ({ editor }) => drafts.edit(key, editor.getMarkdown()),
       onSelectionUpdate: () => setVersion((value) => value + 1),

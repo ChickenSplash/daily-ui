@@ -692,7 +692,7 @@ small,
 .tiptap > :last-child {
   margin-bottom: 0;
 }
-.tiptap:has(> p:only-child > br:only-child)::before {
+.tiptap[data-empty='true']::before {
   content: attr(data-placeholder);
   color: var(--muted);
   opacity: 0.65;
