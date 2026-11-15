@@ -141,7 +141,6 @@ export function JournalEditor({ journal, date, drafts }: { journal: Journal; dat
             }
           }}
         >
-          <span className="journal-symbol">{journal.position === 1 ? '✧' : '▤'}</span>
           <span className="journal-heading-text">
             <span className="journal-title-row">
               <h2 title={journal.name}>{journal.name}</h2>

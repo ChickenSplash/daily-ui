@@ -14,12 +14,14 @@ Deployed on 13 November 2026. The production smoke check covered shared sign-in,
 - Activities measured in repetitions, metres or seconds, or a simple checkbox.
 - Daily totals, partial progress, completion, skip and undo on past, present or future dates.
 - Weekly routines with effective dates and historical target snapshots.
-- Journal management, activity archiving and confirmed deletion of archived activities, timezone settings, dark/light themes and export.
+- Journal and activity management, archiving, timezone settings, neutral charcoal/light themes and export. Permanent deletion is available only for archived items and requires typing `DELETE`.
 - A minimal calendar: centred date numbers and a single dot for today, without activity or journal badges.
 - Shared 280 ms ease-out animations for day navigation, month navigation and collapsible journals/activities, with reduced-motion support.
 - Previous-day content stays visible but cannot be edited while another day loads.
 - Activity creation and management share a tabbed dialog. All dropdowns are themed, keyboard-accessible popovers that scroll independently of their modal.
-- Compact journal headers include their prompt; journal management sits below them. Settings and logout live in the profile menu.
+- Compact journal headers include their prompt without decorative icons. Settings, journal management, activity management and logout live in the profile menu.
+- Dates are centred between the navigation arrows. Narrow writing areas use a short date and fluid text sizing to avoid wrapping, including tablet widths with the sidebar visible.
+- Inputs and dropdowns share 14px text, 20px line height and a 44px minimum height.
 - Registered users and guests both supported. Guest data is temporary and cascades on account deletion.
 
 ## Stack

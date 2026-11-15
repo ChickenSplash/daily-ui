@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './lib/api'
 import { goToSignIn } from './lib/accounts'
-import { addDays, displayDate, displayDayHeading, validDate } from './lib/dates'
+import { addDays, displayDate, displayDayHeading, displayShortDayHeading, validDate } from './lib/dates'
 import { Drafts } from './lib/drafts'
 import type { Bootstrap, Day, User } from './lib/types'
 import { Calendar } from './components/Calendar'
 import { JournalEditor } from './components/JournalEditor'
 import { Activities } from './components/Activities'
-import { ManageJournals, Settings } from './components/Manage'
+import { ManageActivities, ManageJournals, Settings } from './components/Manage'
 import { Dialog } from './components/Dialog'
 import { ProfileMenu } from './components/ProfileMenu'
 
@@ -59,7 +59,7 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
   })
   const [month, setMonth] = useState(selected.slice(0, 7))
   const [dateSlide, setDateSlide] = useState<{ from: string; direction: 'forward' | 'backward' } | null>(null)
-  const [modal, setModal] = useState<'journals' | 'settings' | 'logout' | null>(null)
+  const [modal, setModal] = useState<'journals' | 'activities' | 'settings' | 'logout' | null>(null)
   const [logoutError, setLogoutError] = useState('')
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [theme, setTheme] = useState(() => {
@@ -140,6 +140,8 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
           <ProfileMenu
             user={user}
             settings={() => setModal('settings')}
+            journals={() => setModal('journals')}
+            activities={() => setModal('activities')}
             logout={() => {
               setLogoutError('')
               setModal('logout')
@@ -165,15 +167,22 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
             <div className={`day-date ${dateSlide ? `date-slide-${dateSlide.direction}` : ''}`}>
               {dateSlide && (
                 <span key={`out-${selected}`} className="date-outgoing" aria-hidden="true">
-                  {displayDayHeading(dateSlide.from)}
+                  <span className="date-long">{displayDayHeading(dateSlide.from)}</span>
+                  <span className="date-short">{displayShortDayHeading(dateSlide.from)}</span>
                 </span>
               )}
               <h1
                 key={selected}
+                aria-label={displayDayHeading(selected)}
                 className={dateSlide ? 'date-incoming' : undefined}
                 onAnimationEnd={() => setDateSlide(null)}
               >
-                {displayDayHeading(selected)}
+                <span className="date-long" aria-hidden="true">
+                  {displayDayHeading(selected)}
+                </span>
+                <span className="date-short" aria-hidden="true">
+                  {displayShortDayHeading(selected)}
+                </span>
               </h1>
             </div>
             <div className="day-next-controls">
@@ -227,20 +236,16 @@ function Workspace({ user, data }: { user: User; data: Bootstrap }) {
                   drafts={drafts}
                 />
               ))}
-              <button className="journal-card journal-manager" onClick={() => setModal('journals')}>
-                <span className="journal-symbol" aria-hidden="true">
-                  ▤
-                </span>
-                <span>Manage journals</span>
-                <span className="collapse-icon" aria-hidden="true">
-                  ＋
-                </span>
-              </button>
             </div>
           )}
         </main>
       </div>
       {modal === 'journals' && <ManageJournals data={data} changed={changed} close={() => setModal(null)} />}
+      {modal === 'activities' && (
+        <Dialog title="Manage activities" close={() => setModal(null)}>
+          <ManageActivities data={data} changed={changed} />
+        </Dialog>
+      )}
       {modal === 'settings' && <Settings data={data} user={user} changed={changed} close={() => setModal(null)} />}
       {modal === 'logout' && (
         <Dialog

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { addDays, displayDayHeading } from '../src/lib/dates'
+import { addDays, displayDayHeading, displayShortDayHeading } from '../src/lib/dates'
 
 async function join(page: Page) {
   await page.context().setExtraHTTPHeaders({
@@ -20,6 +20,44 @@ const section = (page: Page, name = 'Daily journal') =>
 async function saved(page: Page, name = 'Daily journal') {
   await expect(section(page, name).getByRole('status')).toHaveText('✓ Saved')
 }
+
+test('dark and light themes use neutral surfaces and accents without changing motion', async ({ page }) => {
+  await join(page)
+  for (const theme of ['dark', 'light']) {
+    if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme', exact: true }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+    const palette = await page.locator('html').evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        colours: ['bg', 'panel', 'raised', 'hover', 'line', 'text', 'muted', 'accent', 'accent-bg', 'field'].map(
+          (token) => style.getPropertyValue(`--${token}`).trim(),
+        ),
+        motion: style.getPropertyValue('--motion-duration').trim(),
+      }
+    })
+    for (const colour of palette.colours) {
+      expect(colour).toMatch(/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i)
+      const hex =
+        colour.length === 4
+          ? colour
+              .slice(1)
+              .split('')
+              .map((digit) => digit.repeat(2))
+              .join('')
+          : colour.slice(1)
+      expect(hex.slice(0, 2)).toBe(hex.slice(2, 4))
+      expect(hex.slice(2, 4)).toBe(hex.slice(4, 6))
+    }
+    const durationMs = parseFloat(palette.motion) * (palette.motion.endsWith('ms') ? 1 : 1000)
+    expect(durationMs).toBeCloseTo(280)
+    await page.screenshot({
+      path: `/tmp/opencode/daily-neutral-${theme}-${test.info().project.name}.png`,
+      fullPage: true,
+    })
+  }
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+})
 
 test('activity picker is themed and groups already-added activities without allowing duplicates', async ({
   page,
@@ -131,10 +169,7 @@ test('journal prompts stay in the clickable header while only the editor folds',
   expect(await prompt.evaluate((element) => element.getBoundingClientRect().top)).toBe(top)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await prompt.hover()
-  const manager = page.getByRole('button', { name: 'Manage journals', exact: true })
-  const background = await title.evaluate((element) => getComputedStyle(element).backgroundColor)
-  await manager.hover()
-  await expect(manager).toHaveCSS('background-color', background)
+  await expect(title.locator('.journal-symbol')).toHaveCount(0)
 })
 
 test('profile menu contains settings and logout, while Today lives beside next day', async ({ page }) => {
@@ -148,7 +183,7 @@ test('profile menu contains settings and logout, while Today lives beside next d
   await expect(page.getByRole('button', { name: 'Settings', exact: true })).toHaveCount(0)
   await profile.click()
   await expect(profile).toHaveAttribute('aria-expanded', 'true')
-  await expect(menu.getByRole('menuitem')).toHaveText(['Settings', 'Log out'])
+  await expect(menu.getByRole('menuitem')).toHaveText(['Settings', 'Manage journals', 'Manage activities', 'Log out'])
   await menu.getByRole('menuitem', { name: 'Settings', exact: true }).click()
   const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
   await expect(settings).toBeVisible()
@@ -158,6 +193,20 @@ test('profile menu contains settings and logout, while Today lives beside next d
   await profile.press('ArrowDown')
   await expect(menu.getByRole('menuitem', { name: 'Settings', exact: true })).toBeFocused()
   await page.keyboard.press('ArrowDown')
+  await expect(menu.getByRole('menuitem', { name: 'Manage journals', exact: true })).toBeFocused()
+  await page.keyboard.press('Enter')
+  const journals = page.getByRole('dialog', { name: 'Manage journals', exact: true })
+  await expect(journals).toBeVisible()
+  await journals.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(profile).toBeFocused()
+  await profile.click()
+  await menu.getByRole('menuitem', { name: 'Manage activities', exact: true }).click()
+  const activities = page.getByRole('dialog', { name: 'Manage activities', exact: true })
+  await expect(activities).toBeVisible()
+  await expect(menu).not.toBeVisible()
+  await activities.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(profile).toBeFocused()
+  await profile.press('ArrowUp')
   await expect(menu.getByRole('menuitem', { name: 'Log out', exact: true })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(profile).toBeFocused()
@@ -169,7 +218,7 @@ test('profile menu contains settings and logout, while Today lives beside next d
   await expect(logout).toBeVisible()
   await logout.getByRole('button', { name: 'Cancel', exact: true }).click()
   await profile.click()
-  await today.click()
+  await page.locator('.guest-notice').click()
   await expect(menu).not.toBeVisible()
   await page.getByRole('button', { name: 'Next day', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`date=${addDays(originalDate, 1)}`))
@@ -279,6 +328,17 @@ test('all dropdowns use the floating component and inputs share its border treat
   const dialog = page.getByRole('dialog', { name: 'Activities', exact: true })
   const name = dialog.getByLabel('Name', { exact: true })
   const track = dialog.getByRole('combobox', { name: 'Track by', exact: true })
+  for (const property of ['font-size', 'line-height', 'padding', 'min-height', 'border-radius'] as const) {
+    const expected = await track.evaluate(
+      (element, property) => getComputedStyle(element).getPropertyValue(property),
+      property,
+    )
+    await expect(name).toHaveCSS(property, expected)
+    await expect(dialog.getByLabel('Daily target (reps)')).toHaveCSS(property, expected)
+  }
+  const height = await track.evaluate((element) => element.getBoundingClientRect().height)
+  expect(await name.evaluate((element) => element.getBoundingClientRect().height)).toBe(height)
+  expect(height).toBe(44)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await track.hover()
   const border = await track.evaluate((element) => getComputedStyle(element).borderColor)
@@ -334,13 +394,14 @@ test('day headings include the year and correct ordinal suffixes', () => {
   }
 })
 
-test('management lives in the journal card and tabbed activity dialog', async ({ page }) => {
+test('management lives in the profile menu and tabbed activity dialog', async ({ page }) => {
   await join(page)
   await expect(page.locator('.sidebar').getByRole('button', { name: /Manage/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Manage activities/ })).toHaveCount(0)
   await expect(page.getByText('A record of your days. Just for you.', { exact: true })).toHaveCount(0)
-  const journalManager = page.getByRole('button', { name: 'Manage journals', exact: true })
-  await expect(journalManager).toHaveClass('journal-card journal-manager')
+  await expect(page.locator('.day-sections .journal-manager')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Daily tester', exact: true }).click()
+  const journalManager = page.getByRole('menuitem', { name: 'Manage journals', exact: true })
   await journalManager.click()
   await expect(page.getByRole('dialog', { name: 'Manage journals', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Close', exact: true }).click()
@@ -447,13 +508,54 @@ test('calendar months slide vertically with shared timing and reduced-motion sup
   await expect(title).not.toHaveText(initial)
 })
 
+test('mobile dates stay on one line and shrink with the available space', async ({ page }) => {
+  await join(page)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/?date=2026-09-23')
+  const title = page.locator('.day-heading h1')
+  await expect(title).toHaveAccessibleName(displayDayHeading('2026-09-23'))
+  let previousFontSize = Infinity
+  for (const width of [980, 800, 758, 721, 720, 390, 320, 280]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(title).toHaveJSProperty('innerText', displayShortDayHeading('2026-09-23'))
+    const metrics = await title.evaluate((element) => {
+      const text = element.querySelector('.date-short')!
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      return {
+        lines: range.getClientRects().length,
+        textWidth: range.getBoundingClientRect().width,
+        availableWidth: element.getBoundingClientRect().width,
+        fontSize: parseFloat(getComputedStyle(element).fontSize),
+        centreOffset: (() => {
+          const header = element.closest('.day-heading')!
+          const previous = header.querySelector('[aria-label="Previous day"]')!.getBoundingClientRect()
+          const next = header.querySelector('[aria-label="Next day"]')!.getBoundingClientRect()
+          const date = element.getBoundingClientRect()
+          return Math.abs(date.x + date.width / 2 - (previous.right + next.left) / 2)
+        })(),
+      }
+    })
+    expect(metrics.lines).toBe(1)
+    expect(metrics.centreOffset).toBeLessThan(1)
+    expect(metrics.textWidth).toBeLessThanOrEqual(metrics.availableWidth)
+    // The sidebar disappears at 720px, giving the heading more room again.
+    if (width <= 390) expect(metrics.fontSize).toBeLessThanOrEqual(previousFontSize)
+    previousFontSize = metrics.fontSize
+  }
+  await page.getByRole('button', { name: 'Next day', exact: true }).click()
+  await expect(title).toHaveJSProperty('innerText', displayShortDayHeading('2026-09-24'))
+  await page.setViewportSize({ width: 1440, height: 1100 })
+  await expect(title).toHaveJSProperty('innerText', displayDayHeading('2026-09-24'))
+})
+
 test('date-only heading slides in both directions with shared timing and reduced-motion support', async ({ page }) => {
   await join(page)
   const header = page.locator('.day-heading')
   const title = header.getByRole('heading', { level: 1 })
   const initial = await title.innerText()
   const date = new URL(page.url()).searchParams.get('date')!
-  await expect(title).toHaveText(displayDayHeading(date))
+  await expect(title).toHaveAccessibleName(displayDayHeading(date))
   await expect(header.locator('.eyebrow, p')).toHaveCount(0)
   const duration = await page
     .locator('.journal-body')
@@ -470,12 +572,12 @@ test('date-only heading slides in both directions with shared timing and reduced
     await expect(header.locator('.date-outgoing')).toHaveAttribute('aria-hidden', 'true')
     await expect(header.locator('.date-outgoing')).toHaveCount(0)
   }
-  await expect(title).toHaveText(initial)
+  await expect(title).toHaveJSProperty('innerText', initial)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.getByRole('button', { name: 'Next day', exact: true }).click()
   await expect(title).toHaveCSS('animation-name', 'none')
   await expect(header.locator('.date-outgoing')).toBeHidden()
-  await expect(title).not.toHaveText(initial)
+  await expect(title).not.toHaveJSProperty('innerText', initial)
 })
 
 test('journals slide closed and open without losing text, with reduced-motion support', async ({ page }) => {
@@ -595,7 +697,8 @@ test('one-off totals, complete, undo and skip', async ({ page }) => {
 
 test('journals can be created, archived, restored and deleted', async ({ page }) => {
   await join(page)
-  await page.getByRole('button', { name: /Manage journals/ }).click()
+  await page.getByRole('button', { name: 'Daily tester', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Manage journals', exact: true }).click()
   await page.getByRole('button', { name: '＋ New journal' }).click()
   const form = page.getByRole('dialog', { name: 'New journal', exact: true })
   await form.getByLabel('Name', { exact: true }).fill('Dreams')
@@ -604,11 +707,24 @@ test('journals can be created, archived, restored and deleted', async ({ page })
   const manager = page.getByRole('dialog', { name: 'Manage journals', exact: true })
   const item = manager.locator('.manage-item').filter({ hasText: 'Dreams' })
   await expect(item).toBeVisible()
+  await expect(item.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
   await item.getByRole('button', { name: 'Archive', exact: true }).click()
   await expect(item.getByRole('button', { name: 'Restore' })).toBeVisible()
   await item.getByRole('button', { name: 'Restore' }).click()
+  await expect(item.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
+  await item.getByRole('button', { name: 'Archive', exact: true }).click()
   await item.getByRole('button', { name: 'Delete', exact: true }).click()
   const confirm = page.getByRole('dialog', { name: 'Permanently delete journal?' })
+  const deleteButton = confirm.getByRole('button', { name: 'Delete permanently' })
+  await expect(deleteButton).toBeDisabled()
+  await confirm.getByLabel('Type DELETE to confirm').fill('delete')
+  await expect(deleteButton).toBeDisabled()
+  await confirm.getByLabel('Type DELETE to confirm').fill('DELETE')
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(item).toBeVisible()
+  await item.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect(confirm.getByLabel('Type DELETE to confirm')).toHaveValue('')
+  await expect(deleteButton).toBeDisabled()
   await confirm.getByLabel('Type DELETE to confirm').fill('DELETE')
   await confirm.getByRole('button', { name: 'Delete permanently' }).click()
   await expect(item).toHaveCount(0)
@@ -768,10 +884,19 @@ test('archived activities can be deleted with confirmation or kept by cancelling
   await item.getByRole('button', { name: 'Delete', exact: true }).click()
   const confirmation = page.getByRole('dialog', { name: 'Permanently delete activity?' })
   await expect(confirmation).toContainText('all its daily progress records')
+  const deleteButton = confirmation.getByRole('button', { name: 'Delete permanently', exact: true })
+  await expect(deleteButton).toBeDisabled()
+  await confirmation.getByLabel('Type DELETE to confirm').fill('delete')
+  await expect(deleteButton).toBeDisabled()
+  await confirmation.getByLabel('Type DELETE to confirm').fill('DELETE')
+  await expect(deleteButton).toBeEnabled()
   await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(item).toBeVisible()
   await item.getByRole('button', { name: 'Delete', exact: true }).click()
-  await confirmation.getByRole('button', { name: 'Delete activity', exact: true }).click()
+  await expect(confirmation.getByLabel('Type DELETE to confirm')).toHaveValue('')
+  await expect(deleteButton).toBeDisabled()
+  await confirmation.getByLabel('Type DELETE to confirm').fill('DELETE')
+  await deleteButton.click()
   await expect(item).toHaveCount(0)
 })
 
@@ -789,7 +914,7 @@ test('day arrows flank the centred date and the writing area has no focus outlin
     return {
       left: Math.abs(previous.x - header.x),
       right: Math.abs(today.right - header.right),
-      centre: Math.abs(date.x + date.width / 2 - (header.x + header.width / 2)),
+      centre: Math.abs(date.x + date.width / 2 - (previous.right + next.left) / 2),
       ordered: previous.right <= date.left && date.right <= next.left && next.right < today.left,
     }
   })
@@ -901,11 +1026,7 @@ test('calendar is centred with only a today dot and collapsed journal padding is
     )
     .toBe(true)
   const title = journal.locator('.journal-title')
-  const manager = page.getByRole('button', { name: 'Manage journals', exact: true })
-  const padding = await manager.evaluate((element) => getComputedStyle(element).padding)
-  await expect(title).toHaveCSS('padding', padding)
-  const managerHeight = await manager.evaluate((element) => element.getBoundingClientRect().height)
-  await expect.poll(() => journal.evaluate((element) => element.getBoundingClientRect().height)).toBe(managerHeight)
+  await expect.poll(() => journal.evaluate((element) => element.getBoundingClientRect().height)).toBe(72)
   const inset = await title.evaluate((element) => {
     const button = element.getBoundingClientRect()
     const header = element.parentElement!.getBoundingClientRect()
@@ -916,9 +1037,6 @@ test('calendar is centred with only a today dot and collapsed journal padding is
   expect(inset).toBeLessThan(1)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await title.hover()
-  const hover = await title.evaluate((element) => getComputedStyle(element).backgroundColor)
-  await manager.hover()
-  await expect(manager).toHaveCSS('background-color', hover)
   if (testInfo.project.name !== 'firefox')
     await page.screenshot({ path: `/tmp/opencode/daily-tweaks-${testInfo.project.name}.png`, fullPage: true })
 })

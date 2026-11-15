@@ -2,7 +2,19 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { User } from '../lib/types'
 
-export function ProfileMenu({ user, settings, logout }: { user: User; settings: () => void; logout: () => void }) {
+export function ProfileMenu({
+  user,
+  settings,
+  journals,
+  activities,
+  logout,
+}: {
+  user: User
+  settings: () => void
+  journals: () => void
+  activities: () => void
+  logout: () => void
+}) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const root = useRef<HTMLDivElement>(null)
@@ -93,6 +105,24 @@ export function ProfileMenu({ user, settings, logout }: { user: User; settings: 
             }}
           >
             Settings
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              close()
+              journals()
+            }}
+          >
+            Manage journals
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              close()
+              activities()
+            }}
+          >
+            Manage activities
           </button>
           <button
             role="menuitem"

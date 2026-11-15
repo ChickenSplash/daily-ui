@@ -10,17 +10,17 @@
     -apple-system,
     sans-serif;
   color-scheme: dark;
-  --bg: #101512;
-  --panel: #171e19;
-  --raised: #202922;
-  --hover: #29342c;
-  --line: #303c33;
-  --text: #e9ede7;
-  --muted: #99a79b;
-  --accent: #b4d7b3;
-  --accent-bg: #334c38;
+  --bg: #141414;
+  --panel: #1c1c1c;
+  --raised: #262626;
+  --hover: #303030;
+  --line: #383838;
+  --text: #ededed;
+  --muted: #a3a3a3;
+  --accent: #d4d4d4;
+  --accent-bg: #3b3b3b;
   --danger: #f3b3a9;
-  --field: #121914;
+  --field: #181818;
   background: var(--bg);
   color: var(--text);
   font-synthesis: none;
@@ -29,17 +29,17 @@
 }
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f4f5ef;
-  --panel: #fffefa;
-  --raised: #edf0e7;
-  --hover: #e4eadf;
-  --line: #dbe1d5;
-  --text: #253329;
-  --muted: #647367;
-  --accent: #365d3b;
-  --accent-bg: #dbead5;
+  --bg: #f5f5f5;
+  --panel: #ffffff;
+  --raised: #ededed;
+  --hover: #e5e5e5;
+  --line: #d9d9d9;
+  --text: #262626;
+  --muted: #666666;
+  --accent: #404040;
+  --accent-bg: #dedede;
   --danger: #ad3c32;
-  --field: #fafbf7;
+  --field: #fafafa;
 }
 * {
   box-sizing: border-box;
@@ -363,18 +363,22 @@ small,
 }
 .day-heading {
   display: grid;
-  grid-template-columns: 85px minmax(0, 1fr) 85px;
+  grid-template-columns: 40px minmax(0, 1fr) 85px;
   align-items: center;
   margin-bottom: 32px;
   gap: 10px;
 }
 .day-date {
   display: grid;
+  container-type: inline-size;
   min-width: 0;
   text-align: center;
   overflow: hidden;
   --date-enter: 100%;
   --date-exit: -100%;
+}
+.date-short {
+  display: none;
 }
 .day-next-controls {
   display: flex;
@@ -413,6 +417,7 @@ small,
 .day-heading h1,
 .day-heading .date-outgoing {
   font-family: Georgia, 'Times New Roman', serif;
+  white-space: nowrap;
   font-size: clamp(25px, 3vw, 34px);
   font-weight: 400;
   letter-spacing: -0.8px;
@@ -548,17 +553,6 @@ small,
   color: var(--muted);
   margin: 12px 0 6px;
 }
-.journal-manager {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  height: var(--journal-header-height);
-  padding: 12px var(--card-header-padding);
-  text-align: left;
-  font-size: 17px;
-  font-weight: 550;
-}
 .activity-tabs {
   display: flex;
   gap: 6px;
@@ -597,8 +591,7 @@ small,
   align-items: center;
   gap: 11px;
 }
-.journal-title:hover,
-.journal-manager:hover {
+.journal-title:hover {
   background: var(--hover);
 }
 .journal-body {
@@ -628,11 +621,6 @@ small,
 }
 .journal-title small {
   font-size: 10px;
-}
-.journal-symbol {
-  color: var(--accent);
-  font-size: 20px;
-  flex-shrink: 0;
 }
 .collapse-icon {
   margin-left: auto;
@@ -776,7 +764,7 @@ dialog {
   box-shadow: 0 24px 90px #0005;
 }
 dialog::backdrop {
-  background: #050c09b8;
+  background: #080808b8;
   backdrop-filter: blur(4px);
 }
 .dialog-heading {
@@ -805,9 +793,13 @@ label {
   margin: 16px 0;
 }
 input:not([type='checkbox']),
-select {
+select,
+.select-trigger {
   width: 100%;
   min-width: 0;
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 20px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--field);
@@ -833,13 +825,6 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: 100%;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--field);
-  color: var(--text);
-  padding: 11px 12px;
   text-align: left;
 }
 .select-trigger > span:first-child {
@@ -884,7 +869,8 @@ input:not([type='checkbox']):focus-visible {
   gap: 10px;
   padding: 10px 9px;
   border-radius: 5px;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
   overflow-wrap: anywhere;
   cursor: pointer;
 }
@@ -1007,6 +993,18 @@ hr {
     font-size: 27px;
   }
 }
+@container (max-width: 500px) {
+  .day-date .date-long {
+    display: none;
+  }
+  .day-date .date-short {
+    display: inline;
+  }
+  .day-heading h1,
+  .day-heading .date-outgoing {
+    font-size: clamp(12px, 12cqi, 27px);
+  }
+}
 @media (max-width: 720px) {
   :root {
     --card-header-padding: 19px;
@@ -1100,7 +1098,14 @@ hr {
   }
   .day-heading h1,
   .day-heading .date-outgoing {
-    font-size: 27px;
+    font-size: clamp(12px, 12cqi, 27px);
+    white-space: nowrap;
+  }
+  .day-date .date-long {
+    display: none;
+  }
+  .date-short {
+    display: inline;
   }
   .day-sections {
     gap: 17px;
@@ -1111,9 +1116,6 @@ hr {
   .activity-label {
     display: grid;
     gap: 5px;
-  }
-  .journal-manager {
-    font-size: 16px;
   }
   .journal-title h2 {
     font-size: 16px;

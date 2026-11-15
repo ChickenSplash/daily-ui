@@ -67,9 +67,11 @@ export function ManageJournals({ data, changed, close }: Props) {
               <button disabled={busy} onClick={() => void update(journal.id, { archived: !journal.archived_at })}>
                 {journal.archived_at ? 'Restore' : 'Archive'}
               </button>
-              <button className="danger-text" disabled={busy} onClick={() => setDeleting(journal)}>
-                Delete
-              </button>
+              {journal.archived_at && (
+                <button className="danger-text" disabled={busy} onClick={() => setDeleting(journal)}>
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -88,40 +90,16 @@ export function ManageJournals({ data, changed, close }: Props) {
         />
       )}
       {deleting && (
-        <Dialog title="Permanently delete journal?" close={() => setDeleting(null)}>
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault()
-              setBusy(true)
-              try {
-                await api('DELETE', `/api/daily/journals/${deleting.id}`)
-                setDeleting(null)
-                changed()
-              } catch (error) {
-                setError(message(error))
-              } finally {
-                setBusy(false)
-              }
-            }}
-          >
-            <p>
-              This deletes <strong>{deleting.name}</strong> and every entry in it. Export your data first if you need a
-              copy.
-            </p>
-            <label>
-              Type DELETE to confirm
-              <input required pattern="DELETE" autoComplete="off" />
-            </label>
-            <div className="dialog-actions">
-              <button type="button" onClick={() => setDeleting(null)}>
-                Cancel
-              </button>
-              <button className="danger" disabled={busy}>
-                Delete permanently
-              </button>
-            </div>
-          </form>
-        </Dialog>
+        <DeleteConfirmation
+          kind="journal"
+          name={deleting.name}
+          close={() => setDeleting(null)}
+          remove={async () => {
+            await api('DELETE', `/api/daily/journals/${deleting.id}`)
+            setDeleting(null)
+            changed()
+          }}
+        />
       )}
     </Dialog>
   )
@@ -191,13 +169,11 @@ function JournalForm({ journal, close, saved }: { journal: Journal | 'new'; clos
 export function ManageActivities({ data, changed }: Omit<Props, 'close'>) {
   const [editing, setEditing] = useState<Activity | null>(null)
   const [deleting, setDeleting] = useState<Activity | null>(null)
-  const [deleteError, setDeleteError] = useState('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   return (
     <>
-      <p>Create activities and choose which days they repeat. Daily totals stay separate from your routine.</p>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -243,7 +219,6 @@ export function ManageActivities({ data, changed }: Omit<Props, 'close'>) {
                   className="danger-text"
                   disabled={busy}
                   onClick={() => {
-                    setDeleteError('')
                     setDeleting(activity)
                   }}
                 >
@@ -280,48 +255,89 @@ export function ManageActivities({ data, changed }: Omit<Props, 'close'>) {
         />
       )}
       {deleting && (
-        <Dialog
-          title="Permanently delete activity?"
-          close={() => {
-            if (!busy) setDeleting(null)
+        <DeleteConfirmation
+          kind="activity"
+          name={deleting.name}
+          close={() => setDeleting(null)}
+          remove={async () => {
+            await api('DELETE', `/api/daily/activities/${deleting.id}`)
+            setDeleting(null)
+            changed()
           }}
-        >
-          <p>
-            This permanently deletes <strong>{deleting.name}</strong>, its routines and all its daily progress records.
-            This cannot be undone.
-          </p>
-          {deleteError && (
-            <p className="error" role="alert">
-              {deleteError}
-            </p>
-          )}
-          <div className="dialog-actions">
-            <button disabled={busy} onClick={() => setDeleting(null)}>
-              Cancel
-            </button>
-            <button
-              className="danger"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true)
-                setDeleteError('')
-                try {
-                  await api('DELETE', `/api/daily/activities/${deleting.id}`)
-                  setDeleting(null)
-                  changed()
-                } catch (error) {
-                  setDeleteError(message(error))
-                } finally {
-                  setBusy(false)
-                }
-              }}
-            >
-              Delete activity
-            </button>
-          </div>
-        </Dialog>
+        />
       )}
     </>
+  )
+}
+
+function DeleteConfirmation({
+  kind,
+  name,
+  close,
+  remove,
+}: {
+  kind: 'journal' | 'activity'
+  name: string
+  close: () => void
+  remove: () => Promise<void>
+}) {
+  const [confirmation, setConfirmation] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  return (
+    <Dialog
+      title={`Permanently delete ${kind}?`}
+      close={() => {
+        if (!busy) close()
+      }}
+    >
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault()
+          if (busy || confirmation !== 'DELETE') return
+          setBusy(true)
+          setError('')
+          try {
+            await remove()
+          } catch (error) {
+            setError(message(error))
+          } finally {
+            setBusy(false)
+          }
+        }}
+      >
+        <p>
+          This permanently deletes <strong>{name}</strong>
+          {kind === 'journal' ? ' and every entry in it.' : ', its routines and all its daily progress records.'} This
+          cannot be undone. Export your data first if you need a copy.
+        </p>
+        <label>
+          Type DELETE to confirm
+          <input
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            required
+            pattern="DELETE"
+            autoComplete="off"
+            spellCheck={false}
+            disabled={busy}
+          />
+        </label>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" disabled={busy} onClick={close}>
+            Cancel
+          </button>
+          <button className="danger" disabled={busy || confirmation !== 'DELETE'}>
+            Delete permanently
+          </button>
+        </div>
+      </form>
+    </Dialog>
   )
 }
 

@@ -10,6 +10,10 @@ export function addDays(date: string, amount: number): string {
 }
 export const displayDate = (date: string) =>
   parseDate(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+export function displayShortDayHeading(date: string): string {
+  const value = parseDate(date)
+  return `${value.toLocaleDateString('en-GB', { weekday: 'short' })} ${value.getDate()} ${value.toLocaleDateString('en-GB', { month: 'short' })}`
+}
 export function displayDayHeading(date: string): string {
   const value = parseDate(date)
   const day = value.getDate()
